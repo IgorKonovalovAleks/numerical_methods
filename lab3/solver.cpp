@@ -217,7 +217,6 @@ void solver::step_mvr(std::vector<std::vector<type_d>>& v, std::vector<std::vect
 }
 
 void solver::step_mvr(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc) {
-    //mvr
 
     it++;
     type_d accuracy = type_d(0);
@@ -237,6 +236,49 @@ void solver::step_mvr(std::vector<std::vector<type_d>>& v, type_d a, type_d c, t
     acc = accuracy;
 }
 
+void solver::step_msi(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc, type_d& tau, std::vector<type_d>& r) {
+
+  it++;
+  type_d max_z = type_d(0);
+  type_d accuracy = type_d(0);
+  type_d last_v;
+
+  calc_r_vec(v, r);
+  int place = 0;
+  for (int i = 1; i < N; i++)
+    for (int j = 1; j < M; j++) {
+      last_v = v[i][j];
+      v[i][j] = last_v - tau * r[place];
+      place++;
+      if (abs(last_v - v[i][j]) > accuracy)
+        accuracy = abs(last_v - v[i][j]);
+      z[i][j] = abs(v[i][j] - u(a + i * h, c + j * k));
+      if (z[i][j] > max_z)
+        max_z = z[i][j];
+    }
+
+  mz = max_z;
+  acc = accuracy;
+}
+
+void solver::step_msi(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc, type_d& tau, std::vector<type_d>& r) {
+
+  it++;
+  type_d accuracy = type_d(0);
+  type_d last_v;
+
+  calc_r_vec(v, r);
+  int place = 0;
+  for (int i = 1; i < N; i++)
+    for (int j = 1; j < M; j++) {
+      last_v = v[i][j];
+      v[i][j] = last_v - tau * r[place];
+      place++;
+      if (abs(last_v - v[i][j]) > accuracy)
+        accuracy = abs(last_v - v[i][j]);
+    }
+  acc = accuracy;
+}
 
 void solver::copy(std::vector<std::vector<type_d>>& v1, std::vector<std::vector<type_d>>& z1, std::vector<std::vector<type_d>>& v2, std::vector<std::vector<type_d>>& z2) {
     for (int i = 0; i <= N; i++)
@@ -404,6 +446,75 @@ Q_INVOKABLE void solver::solve(int n, int m, type_d a, type_d b, type_d c, type_
         MAX_R.resize(iter_size);
         MAX_Z.resize(iter_size);
     }
+    else if (meth == Methods::msi) {
+
+      type_d lambda1;
+      type_d lambdaN;
+      lambda1 = A - abs(right_side[0] - A);
+      lambdaN = A + abs(right_side[0] - A);
+      for (int i = 1; i < right_side.size(); i++) {
+        lambda1 = A - abs(right_side[i] - A) < lambda1 ? A - abs(right_side[0] - A) : lambda1;
+        lambdaN = A + abs(right_side[i] - A) > lambdaN ? A + abs(right_side[0] - A) : lambdaN;
+      }
+      type_d tau(type_d(2.0) / (lambda1 + lambdaN));
+      std::vector<type_d> r((N - 1) * (M - 1));
+
+      timer.start();
+      step_msi(v[9], z[9], a, c, last_mz, last_accuracy, tau, r);
+      emit progressUpdate((0 * 100) / max_it, last_accuracy, timer.elapsed(), it);
+      if (N < 100 && M < 100) copy(v[9], z[9], v[cur_photo], z[cur_photo]);
+      cur_photo++;
+
+      iter[0] = (it);
+      ACCURACY[0] = last_accuracy;
+      calc_r(v[9]);
+      MAX_R[0] = max_r;
+      MAX_Z[0] = last_mz;
+
+      step_msi(v[9], z[9], a, c, last_mz, last_accuracy, tau, r);
+      emit progressUpdate((1 * 100) / max_it, last_accuracy, timer.elapsed(), it);
+      if (N < 100 && M < 100) copy(v[9], z[9], v[cur_photo], z[cur_photo]);
+      cur_photo++;
+
+      type_d cur_accuracy = last_accuracy;
+
+      for (size_t i = 2; i < max_it && cur_accuracy > eps; i++) {
+        step_msi(v[9], z[9], a, c, last_mz, cur_accuracy, tau, r);
+        if (i % interval == 0) {
+          iter[iter_size] = (it);
+          ACCURACY[iter_size] = (cur_accuracy);
+          calc_r(v[9]);
+          MAX_R[iter_size] = (max_r);
+          MAX_Z[iter_size] = (last_mz);
+          iter_size++;
+        }
+        if (cur_accuracy < (last_accuracy / type_d(2)) && cur_photo < 9 && N < 100 && M < 100) {
+          copy(v[9], z[9], v[cur_photo], z[cur_photo]);
+          last_accuracy = cur_accuracy;
+          cur_photo++;
+        }
+        emit progressUpdate((i * 100) / max_it, cur_accuracy, timer.elapsed(), it);
+      }
+      emit progressUpdate(100, cur_accuracy, timer.elapsed(), it);
+
+      if (N < 100 && M < 100) {
+        for (; cur_photo < 9; cur_photo++) {
+          copy(v[9], z[9], v[cur_photo], z[cur_photo]);
+        }
+      }
+      max_z = last_mz;
+      achieved_accuracy = cur_accuracy;
+      calc_r(v[9]);
+      iter[iter_size] = (it);
+      ACCURACY[iter_size] = (achieved_accuracy);
+      MAX_R[iter_size] = (max_r);
+      MAX_Z[iter_size] = (max_z);
+      iter.resize(iter_size);
+      ACCURACY.resize(iter_size);
+      MAX_R.resize(iter_size);
+      MAX_Z.resize(iter_size);
+    }
+
     duration = timer.elapsed();
     emit solveFinished();
 }
@@ -543,6 +654,69 @@ Q_INVOKABLE void solver::solve(int n, int m, type_d a, type_d b, type_d c, type_
         ACCURACY.resize(iter_size);
         MAX_R.resize(iter_size);
     }
+    else if (meth == Methods::msi) {
+
+      type_d lambda1;
+      type_d lambdaN;
+      lambda1 = A - abs(right_side[0] - A);
+      lambdaN = A + abs(right_side[0] - A);
+      for (int i = 1; i < right_side.size(); i++) {
+        lambda1 = A - abs(right_side[i] - A) < lambda1 ? A - abs(right_side[0] - A) : lambda1;
+        lambdaN = A + abs(right_side[i] - A) > lambdaN ? A + abs(right_side[0] - A) : lambdaN;
+      }
+      type_d tau(type_d(2.0) / (lambda1 + lambdaN));
+      std::vector<type_d> r((N - 1)* (M - 1));
+
+      timer.start();
+      step_msi(v[9], a, c, last_accuracy, tau, r);
+      emit progressUpdate((0 * 100) / max_it, last_accuracy, timer.elapsed(), it);
+      if (N < 100 && M < 100) copy(v[9], v[cur_photo]);
+        cur_photo++;
+
+      iter[0] = (it);
+      ACCURACY[0] = last_accuracy;
+      calc_r(v[9]);
+      MAX_R[0] = max_r;
+
+      step_msi(v[9], a, c, last_accuracy, tau, r);
+      emit progressUpdate((1 * 100) / max_it, last_accuracy, timer.elapsed(), it);
+      if (N < 100 && M < 100) copy(v[9], v[cur_photo]);
+      cur_photo++;
+
+      type_d cur_accuracy = last_accuracy;
+
+      for (size_t i = 2; i < max_it && cur_accuracy > eps; i++) {
+        step_msi(v[9], a, c, cur_accuracy, tau, r);
+        if (i % interval == 0) {
+          iter[iter_size] = (it);
+          ACCURACY[iter_size] = (cur_accuracy);
+          calc_r(v[9]);
+          MAX_R[iter_size] = (max_r);
+          iter_size++;
+        }
+        if (cur_accuracy < (last_accuracy / type_d(2)) && cur_photo < 9 && N < 100 && M < 100) {
+          copy(v[9], v[cur_photo]);
+          last_accuracy = cur_accuracy;
+          cur_photo++;
+        }
+        emit progressUpdate((i * 100) / max_it, cur_accuracy, timer.elapsed(), it);
+      }
+      emit progressUpdate(100, cur_accuracy, timer.elapsed(), it);
+
+      if (N < 100 && M < 100) {
+        for (; cur_photo < 9; cur_photo++) {
+          copy(v[9], v[cur_photo]);
+        }
+      }
+      achieved_accuracy = cur_accuracy;
+      calc_r(v[9]);
+      iter[iter_size] = (it);
+      ACCURACY[iter_size] = (cur_accuracy);
+      MAX_R[iter_size] = (max_r);
+      iter.resize(iter_size);
+      ACCURACY.resize(iter_size);
+      MAX_R.resize(iter_size);
+    }
     duration = timer.elapsed();
     valid = true;
     emit solveFinished();
@@ -563,6 +737,23 @@ void solver::fill_right_side(std::vector<std::vector<type_d>>& v, type_d a, type
                                  - ver * v[i][j + 1] * is_border(i, j + 1));
         }
     }
+}
+
+void solver::calc_r_vec(std::vector<std::vector<type_d>>& v, std::vector<type_d>& res) {
+  int place = 0;
+  for (int j = 1; j < M; j++) {
+    for (int i = 1; i < N; i++) {
+      res[place] = ((A * v[i][j] + (!(is_border(i - 1, j))) * hor * v[i - 1][j]
+        + (!(is_border(i + 1, j))) * hor * v[i + 1][j]
+        + (!(is_border(i, j - 1))) * hor * v[i][j - 1]
+        + (!(is_border(i, j + 1))) * hor * v[i][j + 1] - right_side[place]) *
+        (A * v[i][j] + (!(is_border(i - 1, j))) * hor * v[i - 1][j]
+          + (!(is_border(i + 1, j))) * hor * v[i + 1][j]
+          + (!(is_border(i, j - 1))) * hor * v[i][j - 1]
+          + (!(is_border(i, j + 1))) * hor * v[i][j + 1] - right_side[place]));
+      place++;
+    }
+  }
 }
 
 void solver::calc_r(std::vector<std::vector<type_d>>& v){

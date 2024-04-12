@@ -60,7 +60,8 @@ MainWindow::MainWindow(QWidget* parent)
     QPushButton *removetrueGraphButton = new QPushButton("Скрыть аналитическое решение", this);
     QPushButton *removepGraphButton = new QPushButton("Скрыть разность решений", this);
     QRadioButton *methVariant1 = new QRadioButton("Зейдель", this);
-    QRadioButton *methVariant2 = new QRadioButton("МВР", this);
+    //QRadioButton *methVariant2 = new QRadioButton("МВР", this);
+    QRadioButton *methVariant3 = new QRadioButton("МПИ", this);
     QRadioButton *taskVariant1 = new QRadioButton("Тестовая", this);
     QRadioButton *taskVariant2 = new QRadioButton("Основная", this);
 
@@ -71,7 +72,8 @@ MainWindow::MainWindow(QWidget* parent)
 
     QButtonGroup *taskbuttonGroup2 = new QButtonGroup(this);
     taskbuttonGroup2->addButton(methVariant1);
-    taskbuttonGroup2->addButton(methVariant2);
+    //taskbuttonGroup2->addButton(methVariant2);
+    taskbuttonGroup2->addButton(methVariant3);
     methVariant1->setChecked(true);
 
     connect(graphButton, &QPushButton::clicked, this, &MainWindow::showGraph);
@@ -85,7 +87,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(taskVariant1, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
     connect(taskVariant2, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
     connect(methVariant1, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
-    connect(methVariant2, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
+    connect(methVariant3, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
+    //connect(methVariant2, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
 
     slider = new QSlider(Qt::Horizontal);
     slider->setMinimum(1);
@@ -101,7 +104,8 @@ MainWindow::MainWindow(QWidget* parent)
     controlLayout->addWidget(taskVariant1);
     controlLayout->addWidget(taskVariant2);
     controlLayout->addWidget(methVariant1);
-    controlLayout->addWidget(methVariant2);
+    //controlLayout->addWidget(methVariant2);
+    controlLayout->addWidget(methVariant3);
     controlLayout->addWidget(label1);
     controlLayout->addWidget(xn);
     controlLayout->addWidget(label2);

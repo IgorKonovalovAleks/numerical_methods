@@ -42,7 +42,7 @@ enum Functions {
 };
 
 enum Methods {
-    zeidel, mvr
+    zeidel, mvr, msi
 };
 
 class solver : public QObject {
@@ -61,15 +61,19 @@ class solver : public QObject {
     void fill_right_side2(std::vector<std::vector<type_d>>& v, type_d a, type_d c);
 
     void calc_r(std::vector<std::vector<type_d>>& v);
+    void calc_r_vec(std::vector<std::vector<type_d>>& v, std::vector<type_d>& res);
 
     void prepare(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c);
     void prepare(std::vector<std::vector<type_d>>& v, type_d a, type_d c);
 
     void step(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
-    void step(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc) ;
+    void step(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc);
 
     void step_mvr(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
     void step_mvr(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc) ;
+
+    void step_msi(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc, type_d& tau, std::vector<type_d>& r);
+    void step_msi(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc, type_d& tau, std::vector<type_d>& r);
 
     void copy(std::vector<std::vector<type_d>>& v1, std::vector<std::vector<type_d>>& z1, std::vector<std::vector<type_d>>& v2, std::vector<std::vector<type_d>>& z2);
     void copy(std::vector<std::vector<type_d>>& v1, std::vector<std::vector<type_d>>& v2);
