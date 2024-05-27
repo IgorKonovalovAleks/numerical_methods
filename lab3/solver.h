@@ -5,9 +5,7 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/math/constants/constants.hpp>
 
-#define type_d high_precision_type
-
-using high_precision_type = boost::multiprecision::cpp_dec_float_50;
+#define type_d double
 
 namespace u_test {
 type_d u(type_d x, type_d y);
@@ -45,6 +43,28 @@ enum Methods {
     zeidel, mvr, msi
 };
 
+class Matrix : std::vector<type_d> {
+  size_t size1, size2;
+public:
+  Matrix() {
+    size1 = 0;
+    size2 = 0;
+  }
+  Matrix(size_t size1, size_t size2) {
+    this->size1 = size1;
+    this->size2 = size2;
+    ((std::vector<type_d>*)this)->resize(size1 * size2);
+  }
+  void resize(size_t size1, size_t size2) {
+    this->size1 = size1;
+    this->size2 = size2;
+    ((std::vector<type_d>*)this)->resize(size1 * size2);
+  }
+  inline type_d& operator()(size_t i, size_t j) {
+    return (*this)[i * size2 + j];
+  }
+};
+
 class solver : public QObject {
     Q_OBJECT
 
@@ -57,26 +77,26 @@ class solver : public QObject {
 
     inline int is_border(int i, int j);
 
-    void fill_right_side(std::vector<std::vector<type_d>>& v, type_d a, type_d c);
-    void fill_right_side2(std::vector<std::vector<type_d>>& v, type_d a, type_d c);
+    void fill_right_side(Matrix& v, type_d a, type_d c);
+    void fill_right_side2(Matrix& v, type_d a, type_d c);
 
-    void calc_r(std::vector<std::vector<type_d>>& v);
-    void calc_r_vec(std::vector<std::vector<type_d>>& v, std::vector<type_d>& res);
+    void calc_r(Matrix& v);
+    void calc_r_vec(Matrix& v, std::vector<type_d>& res);
 
-    void prepare(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c);
-    void prepare(std::vector<std::vector<type_d>>& v, type_d a, type_d c);
+    void prepare(Matrix& v, Matrix& z, type_d a, type_d c);
+    void prepare(Matrix& v, type_d a, type_d c);
 
-    void step(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
-    void step(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc);
+    void step(Matrix& v, Matrix& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
+    void step(Matrix& v, type_d a, type_d c, type_d& acc);
 
-    void step_mvr(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
-    void step_mvr(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc) ;
+    void step_mvr(Matrix& v, Matrix& z, type_d a, type_d c, type_d& mz, type_d& acc) ;
+    void step_mvr(Matrix& v, type_d a, type_d c, type_d& acc) ;
 
-    void step_msi(std::vector<std::vector<type_d>>& v, std::vector<std::vector<type_d>>& z, type_d a, type_d c, type_d& mz, type_d& acc, type_d& tau, std::vector<type_d>& r);
-    void step_msi(std::vector<std::vector<type_d>>& v, type_d a, type_d c, type_d& acc, type_d& tau, std::vector<type_d>& r);
+    void step_msi(Matrix& v, Matrix& z, type_d a, type_d c, type_d& mz, type_d& acc, type_d& tau);
+    void step_msi(Matrix& v, type_d a, type_d c, type_d& acc, type_d& tau);
 
-    void copy(std::vector<std::vector<type_d>>& v1, std::vector<std::vector<type_d>>& z1, std::vector<std::vector<type_d>>& v2, std::vector<std::vector<type_d>>& z2);
-    void copy(std::vector<std::vector<type_d>>& v1, std::vector<std::vector<type_d>>& v2);
+    void copy(Matrix& v1, Matrix& z1, Matrix& v2, Matrix& z2);
+    void copy(Matrix& v1, Matrix& v2);
 
 public:
     int N, M, max_it, it, task;
@@ -89,7 +109,8 @@ public:
     QElapsedTimer timer;
 
     std::vector<int> iter;
-    std::vector<type_d> right_side;
+    Matrix right_side;
+    Matrix buf;
     std::vector<type_d> MAX_Z;
     std::vector<type_d> MAX_R;
     std::vector<type_d> ACCURACY;
@@ -97,8 +118,8 @@ public:
     void constructor();
     void constructor(int function);
 public slots:
-    Q_INVOKABLE void solve(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<std::vector<std::vector<type_d>>>& v, std::vector<std::vector<std::vector<type_d>>>& z);
-    Q_INVOKABLE void solve(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps,int m_it, std::vector<std::vector<std::vector<type_d>>>& v);
+    Q_INVOKABLE void solve(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<Matrix>& v, std::vector<Matrix>& z);
+    Q_INVOKABLE void solve(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps,int m_it, std::vector<Matrix>& v);
 signals:
     void progressUpdate(int progress, type_d accuracy, qint64 elapsed, int curr_it);
     void solveFinished();

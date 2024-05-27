@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-using high_precision_type = boost::multiprecision::cpp_dec_float_50;
 
 
 MainWindow::MainWindow(QWidget* parent)
@@ -191,7 +190,7 @@ void MainWindow::showTrueGraph(){
         for (int j = 0; j <= 2 * Yn; j++) {
             QSurfaceDataRow* row = new QSurfaceDataRow;
             for (int i = 0; i <= 2 * Xn; i++) {
-                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + (h / 2) * i * skipx), static_cast<double>(v2[9][i  * skipx][j * skipy]), static_cast<double>(c + (k / 2) * j * skipy))));
+                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + (h / 2) * i * skipx), static_cast<double>(v2[9](i  * skipx, j * skipy)), static_cast<double>(c + (k / 2) * j * skipy))));
             }
             dataTrueSeries->dataProxy()->addRow(row);
         }
@@ -210,10 +209,10 @@ void MainWindow::showGraph() {
     int maxN = maxsteps->text().toInt();
     int maxN2 = maxsteps2->text().toInt();
     int interval = intervals->text().toInt();
-    type_d ww = type_d(w->text().toStdString());
-    type_d epsilon = type_d(eps->text().toStdString());
-    type_d ww2 = type_d(w2->text().toStdString());
-    type_d epsilon2 = type_d(eps2->text().toStdString());
+    type_d ww = std::stod((w->text().toStdString()));
+    type_d epsilon = std::stod(eps->text().toStdString());
+    type_d ww2 = std::stod(w2->text().toStdString());
+    type_d epsilon2 = std::stod(eps2->text().toStdString());
     lastPlotButton = false;
     if (selectedTask == Functions::test){
         if (Xn != slv.N || Yn != slv.M || maxN != slv.max_it || epsilon != slv.epsilon || selectedTask != slv.task || slv.w != ww || selectedMeth != slv.meth || slv.interval != interval) {
@@ -276,7 +275,7 @@ void MainWindow::drawGraph(){
     for (int j = 0; j <= Yn; j++) {
         QSurfaceDataRow* row = new QSurfaceDataRow;
         for (int i = 0; i <= Xn; i++) {
-            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9][i * skipx][j * skipy]), static_cast<double>(c + slv.k * j * skipy))));
+            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9](i * skipx, j * skipy)), static_cast<double>(c + slv.k * j * skipy))));
         }
         dataSeries->dataProxy()->addRow(row);
     }
@@ -306,7 +305,7 @@ void MainWindow::handleSolveFinished(){
         for (int j = 0; j <= Yn; j++) {
             QSurfaceDataRow* row = new QSurfaceDataRow;
             for (int i = 0; i <= Xn; i++) {
-                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9][i * skipx][j * skipy]), static_cast<double>(c + slv.k * j * skipy))));
+                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9](i * skipx, j * skipy)), static_cast<double>(c + slv.k * j * skipy))));
             }
             dataSeries->dataProxy()->addRow(row);
         }
@@ -319,7 +318,7 @@ void MainWindow::handleSolveFinished(){
                 for (int j = 0; j <= slv.M; j++) {
                     QSurfaceDataRow* row = new QSurfaceDataRow;
                     for (int i = 0; i <= slv.N; i++) {
-                        row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i), static_cast<double>(v[t][i][j]), static_cast<double>(c + slv.k * j))));
+                        row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i), static_cast<double>(v[t](i, j)), static_cast<double>(c + slv.k * j))));
                     }
                     iterations[t]->dataProxy()->addRow(row);
                 }
@@ -334,8 +333,8 @@ void MainWindow::handleSolveFinished(){
         }
         for (int j = 0; j <= slv.M; j++) {
             for (int i = 0; i <= slv.N; i++) {
-                if(abs(v[9][i][j] - u_test::u(a + slv.h * i, c + slv.k * j)) >= slv.max_z){
-                    slv.max_z = abs(v[9][i][j] - u_test::u(a + slv.h * i, c + slv.k * j));
+                if(abs(v[9](i, j) - u_test::u(a + slv.h * i, c + slv.k * j)) >= slv.max_z){
+                    slv.max_z = abs(v[9](i, j) - u_test::u(a + slv.h * i, c + slv.k * j));
                     slv.max_x = static_cast<double>(a + slv.h * i);
                     slv.max_y = static_cast<double>(c + slv.k * j);
                 }
@@ -364,7 +363,7 @@ void MainWindow::handleSolveFinished(){
             for (int j = 0; j <= Yn; j++) {
                 QSurfaceDataRow* row = new QSurfaceDataRow;
                 for (int i = 0; i <= Xn; i++) {
-                    row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9][i * skipx][j * skipy]), static_cast<double>(c + slv.k * j * skipy))));
+                    row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9](i * skipx, j * skipy)), static_cast<double>(c + slv.k * j * skipy))));
                 }
                 dataSeries->dataProxy()->addRow(row);
             }
@@ -387,7 +386,7 @@ void MainWindow::handleSolveFinished(){
                     for (int j = 0; j <= slv.M; j++) {
                         QSurfaceDataRow* row = new QSurfaceDataRow;
                         for (int i = 0; i <= slv.N; i++) {
-                            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i), static_cast<double>(v[t][i][j]), static_cast<double>(c + slv.k * j))));
+                            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i), static_cast<double>(v[t](i, j)), static_cast<double>(c + slv.k * j))));
                         }
                         iterations[t]->dataProxy()->addRow(row);
                     }
@@ -412,7 +411,7 @@ void MainWindow::handleSolveFinished(){
                     for (int j = 0; j <= slv2.M; j++) {
                         QSurfaceDataRow* row = new QSurfaceDataRow;
                         for (int i = 0; i <= slv2.N; i++) {
-                            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv2.h * i), static_cast<double>(v2[t][i][j]), static_cast<double>(c + slv2.k * j))));
+                            row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv2.h * i), static_cast<double>(v2[t](i, j)), static_cast<double>(c + slv2.k * j))));
                         }
                         iterations2[t]->dataProxy()->addRow(row);
                     }
@@ -427,8 +426,8 @@ void MainWindow::handleSolveFinished(){
                 slider->setDisabled(true);
             for (int j = 0; j <= slv.M; j++) {
                 for (int i = 0; i <= slv.N; i++) {
-                    if(abs(v[9][i][j] - v2[9][2 * i][2 * j]) > slv.max_z){
-                        slv.max_z = abs(v[9][i][j] - v2[9][2 * i][2 * j]);
+                    if(abs(v[9](i, j) - v2[9](2 * i, 2 * j)) > slv.max_z){
+                        slv.max_z = abs(v[9](i, j) - v2[9](2 * i, 2 * j));
                         slv.max_x = static_cast<double>(a + slv.h * i);
                         slv.max_y = static_cast<double>(c + slv.k * j);
                     }
@@ -520,32 +519,32 @@ void MainWindow::showTable() {
         tabWidget->addTab(tableWidget1, "Значения точного решения");
         for (int i = 0; i <= Xn; i++) {
             for (int j = 0; j <= Yn; j++) {
-                tableWidget2->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v[9][i * skipx][j * skipy]))));
+                tableWidget2->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v[9](i * skipx, j * skipy)))));
             }
         }
         tabWidget->addTab(tableWidget2, "Значения численного решения");
         for (int i = 0; i <= Xn; i++) {
             for (int j = 0; j <= Yn; j++) {
-                tableWidget3->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(z[9][i * skipx][j * skipy]))));
+                tableWidget3->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(z[9](i * skipx, j * skipy)))));
             }
         }
         tabWidget->addTab(tableWidget3, "Значения погрешности");
     } else {
         for (int i = 0; i <= Xn; i++) {
             for (int j = 0; j <= Yn; j++) {
-                tableWidget1->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v[9][i * skipx][j * skipy]))));
+                tableWidget1->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v[9](i * skipx, j * skipy)))));
             }
         }
         tabWidget->addTab(tableWidget1, "Значения численного решения v");
         for (int i = 0; i <= Xn; i++) {
             for (int j = 0; j <= Yn; j++) {
-                tableWidget2->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v2[9][2 * i * skipx][2 * j * skipy]))));
+                tableWidget2->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(v2[9](2 * i * skipx, 2 * j * skipy)))));
             }
         }
         tabWidget->addTab(tableWidget2, "Значения численного решения v2");
         for (int i = 0; i <= Xn; i++) {
             for (int j = 0; j <= Yn; j++) {
-                tableWidget3->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(abs(v[9][i * skipx][j * skipy] - v2[9][2 * i * skipx][2 * j * skipy])))));
+                tableWidget3->setItem(j, i, new QTableWidgetItem(QString::number(static_cast<double>(abs(v[9](i * skipx, j * skipy) - v2[9](2 * i * skipx, 2 * j * skipy))))));
             }
         }
         tabWidget->addTab(tableWidget3, "Значения разности v - v2");
@@ -598,7 +597,7 @@ void MainWindow::showSummary(){
         summary->setText("<center>"
                          "<h3>"
                          "<p> Для решения основной задачи использованы сетка с числом разбиений по x N = " + QString::number(slv.N) + ", и числом разбиений по y m = " + QString::number(slv.M) +
-                         ", метод верхней релаксации с параметром ω = " + QString::number(static_cast<double>(slv.w)) + ", применены критерии" +
+                         ", метод простой итерации с оптимальным параметром, применены критерии" +
                          " остановки по точности ε<sub>мет</sub> = " + QString::number(static_cast<double>(slv.epsilon)) + " и по числу итераций N<sub>max</sub> = " + QString::number(slv.max_it) +
                          "</p><p> На решение схемы (СЛАУ) затрачено итераций N = " + QString::number(slv.it) +
                          ", и достигнута точность итерационного метода ε<sup>(N)</sup> = " + QString::number(static_cast<double>(slv.achieved_accuracy)) +
@@ -647,10 +646,10 @@ void MainWindow::showPGraph(){
     int maxN2 = maxsteps2->text().toInt();
     int skipx = 1;
     int skipy = 1;
-    type_d ww = type_d(w->text().toStdString());
-    type_d epsilon = type_d(eps->text().toStdString());
-    type_d ww2 = type_d(w2->text().toStdString());
-    type_d epsilon2 = type_d(eps2->text().toStdString());
+    type_d ww = std::stod(w->text().toStdString());
+    type_d epsilon = std::stod(eps->text().toStdString());
+    type_d ww2 = std::stod(w2->text().toStdString());
+    type_d epsilon2 = std::stod(eps2->text().toStdString());
     if (selectedTask == Functions::test){
         if (Xn != slv.N || Yn != slv.M || maxN != slv.max_it || epsilon != slv.epsilon || selectedTask != slv.task || slv.w != ww || selectedMeth != slv.meth) {
             return;
@@ -666,7 +665,7 @@ void MainWindow::showPGraph(){
         for (int j = 0; j <= Yn; j++) {
             QSurfaceDataRow* row = new QSurfaceDataRow;
             for (int i = 0; i <= Xn; i++) {
-                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(z[9][i * skipx][j * skipy]), static_cast<double>(c + slv.k * j * skipy))));
+                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(z[9](i * skipx, j * skipy)), static_cast<double>(c + slv.k * j * skipy))));
             }
             dataPSeries->dataProxy()->addRow(row);
         }
@@ -693,7 +692,7 @@ void MainWindow::showPGraph(){
         for (int j = 0; j <= Yn; j++) {
             QSurfaceDataRow* row = new QSurfaceDataRow;
             for (int i = 0; i <= Xn; i++) {
-                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9][i * skipx][j * skipy] - v2[9][2 * i * skipx][2 * j * skipy]), static_cast<double>(c + slv.k * j * skipy))));
+                row->append(QSurfaceDataItem(QVector3D(static_cast<double>(a + slv.h * i * skipx), static_cast<double>(v[9](i * skipx, j * skipy) - v2[9](2 * i * skipx, 2 * j * skipy)), static_cast<double>(c + slv.k * j * skipy))));
             }
             dataPSeries->dataProxy()->addRow(row);
         }
@@ -707,7 +706,7 @@ void MainWindow::showPGraph(){
     }
 }
 
-void MainWindow::solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<std::vector<std::vector<type_d>>>& v, std::vector<std::vector<std::vector<type_d>>>& z) {
+void MainWindow::solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<Matrix>& v, std::vector<Matrix>& z) {
     QThread* thread = new QThread();
     slv.moveToThread(thread);
     connect(thread, &QThread::started, &slv, [this, n, m, a, b, c, d, eps, m_it, &v, &z]() {
@@ -720,7 +719,7 @@ void MainWindow::solveInBackground(int n, int m, type_d a, type_d b, type_d c, t
     thread->start();
 }
 
-void MainWindow::solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<std::vector<std::vector<type_d>>>& v, type_d eps2, int m_it2, std::vector<std::vector<std::vector<type_d>>>& v2) {
+void MainWindow::solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<Matrix>& v, type_d eps2, int m_it2, std::vector<Matrix>& v2) {
     QThread* thread = new QThread();
     slv.moveToThread(thread);
     slv2.moveToThread(thread);

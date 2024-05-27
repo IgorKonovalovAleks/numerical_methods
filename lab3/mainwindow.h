@@ -23,9 +23,8 @@
 #include <vector>
 #include "solver.h"
 
-#define type_d high_precision_type
+#define type_d double
 
-using high_precision_type = boost::multiprecision::cpp_dec_float_50;
 
 class ProgressWindow : public QWidget {
     Q_OBJECT
@@ -95,9 +94,9 @@ public:
     ProgressWindow *prog2 = nullptr;
     solver slv;
     solver slv2;
-    std::vector<std::vector<std::vector<type_d>>> v;
-    std::vector<std::vector<std::vector<type_d>>> v2;
-    std::vector<std::vector<std::vector<type_d>>> z;
+    std::vector<Matrix> v;
+    std::vector<Matrix> v2;
+    std::vector<Matrix> z;
     type_d a, b, c, d;
     int selectedTask = Functions::test;
     int selectedMeth = 0;
@@ -120,8 +119,8 @@ public slots:
     void showSummary();
     void setT(int t);
     void onRadioButtonClicked();
-    void solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<std::vector<std::vector<type_d>>>& v, std::vector<std::vector<std::vector<type_d>>>& z);
-    void solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<std::vector<std::vector<type_d>>>& v, type_d eps2, int m_it2, std::vector<std::vector<std::vector<type_d>>>& v2);
+    void solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<Matrix>& v, std::vector<Matrix>& z);
+    void solveInBackground(int n, int m, type_d a, type_d b, type_d c, type_d d, type_d eps, int m_it, std::vector<Matrix>& v, type_d eps2, int m_it2, std::vector<Matrix>& v2);
 signals:
     void solverFinished2();
     void solverFinished3();
