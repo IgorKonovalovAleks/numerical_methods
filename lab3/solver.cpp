@@ -1,4 +1,5 @@
 #include "solver.h"
+#include "omp.h"
 #include <iostream>
 #define type_d double
 
@@ -98,6 +99,7 @@ void solver::constructor(int function) {
 void solver::prepare(Matrix& v, Matrix& z, type_d a, type_d c) {
     v.resize(N + 1, M + 1);
     z.resize(N + 1, M + 1);
+    buf.resize(N + 1, M + 1);
 
     for (int i = 0; i < N + 1; i++) {
         v(i, 0) = ux0(a + h * i);
@@ -107,6 +109,11 @@ void solver::prepare(Matrix& v, Matrix& z, type_d a, type_d c) {
     for (int i = 1; i < M; i++) {
         v(0, i) = u0y(c + k * i);
         v(M, i) = u1y(c + k * i);
+    }
+
+    for (int i = 1; i < M; i++) {
+      buf(0, i) = v(0, i);
+      buf(M, i) = v(M, i);
     }
 
     for (int i = 1; i < N; i++)
@@ -120,6 +127,7 @@ void solver::prepare(Matrix& v, Matrix& z, type_d a, type_d c) {
 
 void solver::prepare(Matrix& v, type_d a, type_d c) {
   v.resize(N + 1, M + 1);
+  buf.resize(N + 1, M + 1);
 
   for (int i = 0; i < N + 1; i++) {
     v(i, 0) = ux0(a + h * i);
@@ -129,6 +137,11 @@ void solver::prepare(Matrix& v, type_d a, type_d c) {
   for (int i = 1; i < M; i++) {
     v(0, i) = u0y(c + k * i);
     v(M, i) = u1y(c + k * i);
+  }
+
+  for (int i = 1; i < M; i++) {
+    buf(0, i) = v(0, i);
+    buf(M, i) = v(M, i);
   }
 
   for (int i = 1; i < N; i++)
@@ -158,66 +171,66 @@ void solver::step_mvr(Matrix& v, type_d a, type_d c, type_d& acc) {
 void solver::step_msi(Matrix& v, Matrix& z, type_d a, type_d c, type_d& mz, type_d& acc, type_d& tau) {
 
   it++;
-  type_d max_z = type_d(0);
-  type_d accuracy = type_d(0);
-
-#pragma omp parallel for schedule(dynamic,512)
-  for (int i = 0; i < N + 1; i++)
-    for (int j = 0; j < M + 1; j++) {
-      buf(i, j) = v(i, j);
-    }
-#pragma omp parallel for schedule(dynamic,512)
+  int max_thr = omp_get_max_threads();
+#pragma omp parallel for schedule(dynamic,N/max_thr+1)
   for (int i = 1; i < N; i++) {
-    type_d last_v;
     for (int j = 1; j < M; j++) {
-      last_v = v(i, j);
-      v(i, j) = last_v - tau * (A * buf(i, j) + (!(is_border(i - 1, j))) * hor * buf(i - 1, j)
-        + (!(is_border(i + 1, j))) * hor * buf(i + 1, j)
-        + (!(is_border(i, j - 1))) * hor * buf(i, j - 1)
-        + (!(is_border(i, j + 1))) * hor * buf(i, j + 1) - right_side(i, j));
+      buf(i, j) = v(i, j) - tau * (A * v(i, j) + hor * v(i - 1, j)
+        + hor * v(i + 1, j)
+        + hor * v(i, j - 1)
+        + hor * v(i, j + 1) - right_side(i, j));
     }
   }
-#pragma omp parallel for schedule(dynamic,512)
-  for (int i = 0; i < N + 1; i++)
-    for (int j = 0; j < M + 1; j++) {
-      if (abs(buf(i, j) - v(i, j)) > accuracy)
-        accuracy = abs(buf(i, j) - v(i, j));
+  
+  std::vector<double> accs(max_thr);
+  std::vector<double> mzs(max_thr);
+#pragma omp parallel for schedule(dynamic,N/max_thr+1)
+  for (int i = 1; i < N; i++) {
+    int nthr = omp_get_thread_num();
+    double b;
+    for (int j = 1; j < M; j++) {
+      accs[nthr] = std::max(abs(buf(i, j) - v(i, j)), accs[nthr]);
+      mzs[nthr] = std::max(abs(buf(i, j) - u(i * h, j * k)), mzs[nthr]);
+      v(i, j) = buf(i, j);
     }
-
-  mz = max_z;
-  acc = accuracy;
+  }
+  mz = mzs[0];
+  acc = accs[0];
+  for (int i = 1; i < max_thr; i++) {
+    mz = std::max(mz, mzs[i]);
+    acc = std::max(acc, accs[i]);
+  }
 }
 
 void solver::step_msi(Matrix& v, type_d a, type_d c, type_d& acc, type_d& tau) {
 
   it++;
-  type_d max_z = type_d(0);
-  type_d accuracy = type_d(0);
-
-#pragma omp parallel for schedule(dynamic,100)
-  for (int i = 0; i < N + 1; i++)
-    for (int j = 0; j < M + 1; j++) {
-      buf(i, j) = v(i, j);
-    }
-#pragma omp parallel for schedule(dynamic,100)
+  int max_thr = omp_get_max_threads();
+#pragma omp parallel for schedule(dynamic,N/max_thr+1)
   for (int i = 1; i < N; i++) {
-    type_d last_v;
     for (int j = 1; j < M; j++) {
-      last_v = v(i, j);
-      v(i, j) = last_v - tau * (A * buf(i, j) + (!(is_border(i - 1, j))) * hor * buf(i - 1, j)
-        + (!(is_border(i + 1, j))) * hor * buf(i + 1, j)
-        + (!(is_border(i, j - 1))) * hor * buf(i, j - 1)
-        + (!(is_border(i, j + 1))) * hor * buf(i, j + 1) - right_side(i, j));
+      buf(i, j) = v(i, j) - tau * (A * v(i, j) + hor * v(i - 1, j)
+        + hor * v(i + 1, j)
+        + hor * v(i, j - 1)
+        + hor * v(i, j + 1) - right_side(i, j));
     }
   }
-#pragma omp parallel for schedule(dynamic,100)
-  for (int i = 0; i < N + 1; i++)
+  std::vector<double> accs(max_thr);
+#pragma omp parallel for schedule(dynamic,N/max_thr+1)
+  for (int i = 0; i < N + 1; i++) {
+    int nthr = omp_get_thread_num();
+    double b;
     for (int j = 0; j < M + 1; j++) {
-      if (abs(buf(i, j) - v(i, j)) > accuracy)
-        accuracy = abs(buf(i, j) - v(i, j));
+      accs[nthr] = std::max(abs(buf(i, j) - v(i, j)), accs[nthr]);
+      b = buf(i, j);
+      buf(i, j) = v(i, j);
+      v(i, j) = b;
     }
-  
-  acc = accuracy;
+  }
+  acc = accs[0];
+  for (int i = 1; i < max_thr; i++) {
+    acc = std::max(acc, accs[i]);
+  }
 }
 
 void solver::copy(Matrix& v1, Matrix& z1, Matrix& v2, Matrix& z2) {
@@ -388,9 +401,8 @@ Q_INVOKABLE void solver::solve(int n, int m, type_d a, type_d b, type_d c, type_
         MAX_Z.resize(iter_size);
     }
     else if (meth == Methods::msi) {
-    buf = Matrix(N + 1, M + 1);
-      type_d lambda1;
-      type_d lambdaN;
+      type_d lambda1 = -4.0 / (h * h) * sin(boost::math::constants::pi<type_d>() / (2.0 * n)) - 4.0 / (k * k) * sin(boost::math::constants::pi<type_d>() / (2.0 * m));
+      type_d lambdaN = -4.0 / (h * h) * sin(boost::math::constants::pi<type_d>() * (n - 1) / (2.0 * n)) - 4.0 / (k * k) * sin(boost::math::constants::pi<type_d>() * (m - 1) / (2.0 * m));
       lambda1 = A - abs(2.0 * hor + 2.0 * ver - A);
       lambdaN = A + abs(2.0 * hor + 2.0 * ver - A);
       lambda1 = A - abs(1.0 * hor + 2.0 * ver - A) < lambda1 ? A - abs(1.0 * hor + 2.0 * ver - A) : lambda1;
@@ -600,19 +612,18 @@ Q_INVOKABLE void solver::solve(int n, int m, type_d a, type_d b, type_d c, type_
     }
     else if (meth == Methods::msi) {
 
-    buf = Matrix(N + 1, M + 1);
-      type_d lambda1;
-      type_d lambdaN;
-      lambda1 = A - abs(2.0 * hor + 2.0 * ver - A);
-      lambdaN = A + abs(2.0 * hor + 2.0 * ver - A);
-      lambda1 = A - abs(1.0 * hor + 2.0 * ver - A) < lambda1 ? A - abs(1.0 * hor + 2.0 * ver - A) : lambda1;
-      lambdaN = A + abs(1.0 * hor + 2.0 * ver - A) > lambdaN ? A + abs(1.0 * hor + 2.0 * ver - A) : lambdaN;
-      lambda1 = A - abs(2.0 * hor + 1.0 * ver - A) < lambda1 ? A - abs(2.0 * hor + 1.0 * ver - A) : lambda1;
-      lambdaN = A + abs(2.0 * hor + 1.0 * ver - A) > lambdaN ? A + abs(2.0 * hor + 1.0 * ver - A) : lambdaN;
-      lambda1 = A - abs(1.0 * hor + 1.0 * ver - A) < lambda1 ? A - abs(1.0 * hor + 1.0 * ver - A) : lambda1;
-      lambdaN = A + abs(1.0 * hor + 1.0 * ver - A) > lambdaN ? A + abs(1.0 * hor + 1.0 * ver - A) : lambdaN;
+    type_d lambda1 = 4.0 / (h * h) * sin(boost::math::constants::pi<type_d>() / (2.0 * n)) + 4.0 / (k * k) * sin(boost::math::constants::pi<type_d>() / (2.0 * m));
+    type_d lambdaN = 4.0 / (h * h) * sin(boost::math::constants::pi<type_d>() * (n - 1) / (2.0 * n)) + 4.0 / (k * k) * sin(boost::math::constants::pi<type_d>() * (m - 1) / (2.0 * m));
+    lambda1 = A - abs(2.0 * hor + 2.0 * ver - A);
+    lambdaN = A + abs(2.0 * hor + 2.0 * ver - A);
+    lambda1 = A - abs(1.0 * hor + 2.0 * ver - A) < lambda1 ? A - abs(1.0 * hor + 2.0 * ver - A) : lambda1;
+    lambdaN = A + abs(1.0 * hor + 2.0 * ver - A) > lambdaN ? A + abs(1.0 * hor + 2.0 * ver - A) : lambdaN;
+    lambda1 = A - abs(2.0 * hor + 1.0 * ver - A) < lambda1 ? A - abs(2.0 * hor + 1.0 * ver - A) : lambda1;
+    lambdaN = A + abs(2.0 * hor + 1.0 * ver - A) > lambdaN ? A + abs(2.0 * hor + 1.0 * ver - A) : lambdaN;
+    lambda1 = A - abs(1.0 * hor + 1.0 * ver - A) < lambda1 ? A - abs(1.0 * hor + 1.0 * ver - A) : lambda1;
+    lambdaN = A + abs(1.0 * hor + 1.0 * ver - A) > lambdaN ? A + abs(1.0 * hor + 1.0 * ver - A) : lambdaN;
 
-      type_d tau(type_d(2.0) / (lambda1 + lambdaN));
+      type_d tau(-type_d(2.0) / (lambda1 + lambdaN));
 
       timer.start();
       step_msi(v[9], a, c, last_accuracy, tau);
@@ -677,11 +688,7 @@ void solver::fill_right_side(Matrix& v, type_d a, type_d c){
   right_side = Matrix(N + 1, M + 1);
       for (int j = 1; j < M; j++) {
         for (int i = 1; i < N; i++) {
-          right_side(i, j) = (-f(a + i * h, c + j * k)
-            - hor * v(i - 1, j) * is_border(i - 1, j)
-            - hor * v(i + 1, j) * is_border(i + 1, j)
-            - ver * v(i, j - 1) * is_border(i, j - 1)
-            - ver * v(i, j + 1) * is_border(i, j + 1));
+          right_side(i, j) = (-f(a + i * h, c + j * k));
         }
       }
 }
@@ -693,24 +700,21 @@ void solver::calc_r_vec(Matrix& v, std::vector<type_d>& res) {
 void solver::calc_r(Matrix& v){
     int place = 0;
     type_d r = type_d(0);
-#pragma omp parallel for schedule(dynamic,1) collapse(2)
+#pragma omp parallel for schedule(dynamic,100)
     
       for (int j = 1; j < M; j++) {
         for (int i = 1; i < N; i++) {
-          type_d a = (A * v(i, j) + (!(is_border(i - 1, j))) * hor * v(i - 1, j)
-            + (!(is_border(i + 1, j))) * hor * v(i + 1, j)
-            + (!(is_border(i, j - 1))) * hor * v(i, j - 1)
-            + (!(is_border(i, j + 1))) * hor * v(i, j + 1) - right_side(i, j)) *
-            (A * v(i, j) + (!(is_border(i - 1, j))) * hor * v(i - 1, j)
-              + (!(is_border(i + 1, j))) * hor * v(i + 1, j)
-              + (!(is_border(i, j - 1))) * hor * v(i, j - 1)
-              + (!(is_border(i, j + 1))) * hor * v(i, j + 1) - right_side(i, j));
-#pragma omp critical
-          {
-            r += a;
-          }
+          buf(i, j) = abs((A * v(i, j) + (hor * v(i - 1, j)
+            +  hor * v(i + 1, j)
+            +  hor * v(i, j - 1)
+            +  hor * v(i, j + 1) - right_side(i, j))));
+        }
+      }
+      for (int j = 1; j < M; j++) {
+        for (int i = 1; i < N; i++) {
+          r = std::max(r, buf(i, j));
         }
       }
     
-    max_r = sqrt(r);
+    max_r = r;
 }

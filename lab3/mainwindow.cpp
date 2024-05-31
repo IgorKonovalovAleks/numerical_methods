@@ -594,6 +594,18 @@ void MainWindow::showSummary(){
             tableWidget4->setItem(3, i, new QTableWidgetItem(QString::number(static_cast<double>(slv.MAX_Z[i]))));
         }
     } else if(slv.task == Functions::tmain){
+      type_d e2 = 0;
+      type_d e2x = 0;
+      type_d e2y = 0;
+      for (int i = 1; i < slv.N; i++)
+        for (int j = 1; j < slv.M; j++) {
+          if (e2 < abs(v[9](i, j) - v2[9](2 * i, 2 * j))) {
+            e2 = abs(v[9](i, j) - v2[9](2 * i, 2 * j));
+            e2x = i * slv.h;
+            e2y = j * slv.k;
+          }
+        }
+
         summary->setText("<center>"
                          "<h3>"
                          "<p> Для решения основной задачи использованы сетка с числом разбиений по x N = " + QString::number(slv.N) + ", и числом разбиений по y m = " + QString::number(slv.M) +
@@ -603,15 +615,15 @@ void MainWindow::showSummary(){
                          ", и достигнута точность итерационного метода ε<sup>(N)</sup> = " + QString::number(static_cast<double>(slv.achieved_accuracy)) +
                          "</p><p> Схема (СЛАУ) решена с невязкой || R<sup>(N)</sup>|| = " + QString::number(static_cast<double>(slv.max_r)) +
                          ", для невязки СЛАУ использована евклидова норма" +
-                         "</p><p> Для контроля точности решения использована сетка с половинным шагом, метод верхней релаксации с параметром ω<sub>2</sub> = " + QString::number(static_cast<double>(slv2.w)) +
+                         "</p><p> Для контроля точности решения использована сетка с половинным шагом, метод простой итерации с оптимальным параметром" +
                          ", применены критерии остановки по точности ε <sub>мет-2</sub> = " + QString::number(static_cast<double>(slv2.epsilon)) + " и по числу итераций N<sub>max-2</sub> = " + QString::number(slv2.max_it) +
                          "</p><p> На решение задачи (СЛАУ) затрачено итераций N2 = " + QString::number(slv2.it) +
                          ", и достигнута точность итерационного метода ε<sup>(N2)</sup> = " + QString::number(static_cast<double>(slv2.achieved_accuracy)) +
                          "</p><p> Схема (СЛАУ) на сетке с половинным шагом решена с невязкой\n" + " || R<sup>(N2)</sup>|| = " + QString::number(static_cast<double>(slv2.max_r)) +
                          ", для невязки СЛАУ использована евклидова норма" +
                          "</p><p> Основная задача должна быть решена с погрешностью не более ε = 0.5⋅10<sup>-6</sup>" +
-                         "</p><p> Задача решена с погрешностью ε<sub>2</sub> = " + QString::number(static_cast<double>(slv.max_z)) +
-                         "</p><p> Максимальное отклонение численных решений на основной сетке и сетке с половинным шагом наблюдается в узле x = " + QString::number(static_cast<double>(slv.max_x)) + ", y = " + QString::number(static_cast<double>(slv.max_y)) +
+                         "</p><p> Задача решена с погрешностью ε<sub>2</sub> = " + QString::number(static_cast<double>(e2)) +
+                         "</p><p> Максимальное отклонение численных решений на основной сетке и сетке с половинным шагом наблюдается в узле x = " + QString::number(static_cast<double>(e2x)) + ", y = " + QString::number(static_cast<double>(e2y)) +
                          "</p><p> В качестве начального приближения на обеих сетках использована линейная интерполяция по x" +
                          "</p></h3>"
                          "</center>");

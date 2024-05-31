@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
   darkPalette.setColor(QPalette::HighlightedText, Qt::black);
   a.setPalette(darkPalette);
   MainWindow w;
-  w.setWindowTitle("Лабораторная работа №3");
+  w.setWindowTitle(QString::fromUtf8("Lab 3"));
   w.show();
   return a.exec();
 }
